@@ -523,7 +523,8 @@ void CMainFrame::ShowQPasteWithActiveWindowCheck()
 		}
 	}
 
-	m_quickPaste.ShowQPasteWnd(this, false, true, FALSE);
+	// The quick-paste hotkey should reopen the window where the user last left it.
+	m_quickPaste.ShowQPasteWnd(this, true, true, FALSE);
 }
 
 void CMainFrame::DoTextOnlyPaste()
