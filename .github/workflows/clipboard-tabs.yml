@@ -1,0 +1,35 @@
+name: Clipboard tabs validation
+
+on:
+  push:
+    branches: [feature/clipboard-tabs]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Database regression tests
+        run: python -m unittest discover -s tests -v
+      - uses: microsoft/setup-msbuild@v2
+      - name: Restore packages
+        run: nuget restore CP_Main_10.sln
+      - name: Build Windows x64
+        run: msbuild CP_Main_10.sln /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /m:2 /v:minimal
+      - name: Upload test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ditto-clipboard-tabs-x64-unsigned
+          path: |
+            Release64/Ditto.exe
+            Release64/ICU_Loader.dll
+            Release64/Addins/DittoUtil.dll
+          if-no-files-found: error
