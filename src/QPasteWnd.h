@@ -44,6 +44,7 @@ public:
 
     long m_lID;
     CString m_Desc;
+	CString m_note;
     bool m_bDontAutoDelete;
     bool m_bIsGroup;
     bool m_bHasShortCut;
@@ -128,6 +129,26 @@ public:
 
     //protected:
     CQListCtrl m_lstHeader;
+	struct ClipboardTab { int groupId; CString name; };
+	CTabCtrl m_clipboardTabs;
+	CButton m_addClipboardTab;
+	std::vector<ClipboardTab> m_clipboardTabGroups;
+	void ReloadClipboardTabs();
+	void SyncClipboardTabSelection();
+	void SelectClipboardTab(int index);
+	void ResetClipboardTabsToHistory();
+	int CreateClipboardTab();
+	bool PinClipboardGroup(int groupId);
+	void ShowClipboardTabAddMenu();
+	void AppendClipboardTabDestinations(CMenu& menu);
+	void AddClipboardTabCommands(CMenu* menu);
+	afx_msg void OnClipboardTabChanged(NMHDR* header, LRESULT* result);
+	afx_msg void OnClipboardTabMenu(NMHDR* header, LRESULT* result);
+	afx_msg void OnNewClipboardTab();
+	afx_msg void OnCreateClipboardTabAndAdd();
+	afx_msg void OnAddToClipboardTab();
+	afx_msg void OnClipboardTabDestination(UINT command);
+	afx_msg void OnEditClipboardNote();
 
     CAlphaBlend m_Alpha;
 	//CEditWithButton m_search;

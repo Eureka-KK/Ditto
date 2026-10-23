@@ -57,6 +57,7 @@ BOOL CGetSetOptions::m_bSendPasteMessageAfterSelection;
 BOOL CGetSetOptions::m_bFindAsYouType;
 BOOL CGetSetOptions::m_bEnsureEntireWindowCanBeSeen;
 BOOL CGetSetOptions::m_bShowAllClipsInMainList;
+BOOL CGetSetOptions::m_enableClipboardTabShortcuts = TRUE;
 long CGetSetOptions::m_lMaxClipSizeInBytes;
 DWORD CGetSetOptions::m_dwSaveClipDelay;
 long CGetSetOptions::m_lProcessDrawClipboardDelay;
@@ -281,7 +282,8 @@ void CGetSetOptions::LoadSettings()
 	m_bSendPasteMessageAfterSelection = GetSendPasteAfterSelection();
 	m_bFindAsYouType = GetFindAsYouType();
 	m_bEnsureEntireWindowCanBeSeen = GetEnsureEntireWindowCanBeSeen();
-	m_bShowAllClipsInMainList = GetShowAllClipsInMainList();
+	m_bShowAllClipsInMainList = TRUE; // History is the complete clipboard timeline.
+	m_enableClipboardTabShortcuts = GetProfileLong(_T("ClipboardTabShortcuts"), TRUE);
 	m_lMaxClipSizeInBytes = GetMaxClipSizeInBytes();
 	m_dwSaveClipDelay = GetSaveClipDelay();
 	m_lProcessDrawClipboardDelay = GetProcessDrawClipboardDelay();
@@ -3285,4 +3287,9 @@ void CGetSetOptions::SetEnforceClipboardIgnoreFormats(BOOL val)
 BOOL CGetSetOptions::GetEnforceClipboardIgnoreFormats()
 {
 	return GetProfileLong("EnforceClipboardIgnoreFormats", TRUE);
+}
+void CGetSetOptions::SetClipboardTabShortcuts(BOOL value)
+{
+	m_enableClipboardTabShortcuts = value;
+	SetProfileLong(_T("ClipboardTabShortcuts"), value);
 }

@@ -184,3 +184,11 @@ BYTE CAccels::GetKeyStateModifiers()
     }
     return m;
 }
+
+bool CAccels::ContainsShortcut(DWORD key) const
+{
+	for (const auto& entry : m_multiMap)
+		if (entry.second.Key == key || entry.second.Key2 == key)
+			return true;
+	return false;
+}

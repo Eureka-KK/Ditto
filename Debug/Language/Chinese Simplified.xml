@@ -446,6 +446,19 @@
 		<Item English_Text = "At Cursor" ID = "AtCursor">鼠标指针的位置</Item>
 		<Item English_Text = "At Previous Position" ID = "AtPreviousPosition">上次弹出的位置</Item>
 
+		<Item English_Text = "History" ID = "ClipboardTabHistory">剪贴板历史</Item>
+		<Item English_Text = "New tab..." ID = "ClipboardTabNew">新建标签…</Item>
+		<Item English_Text = "Pin existing group..." ID = "ClipboardTabPin">固定已有分组到标签栏…</Item>
+		<Item English_Text = "Add to tab" ID = "ClipboardTabAdd">添加到标签</Item>
+		<Item English_Text = "Edit note (not pasted)" ID = "ClipboardNoteEdit">编辑备注（不参与粘贴）</Item>
+		<Item English_Text = "Rename tab" ID = "ClipboardTabRename">重命名标签</Item>
+		<Item English_Text = "Move left" ID = "ClipboardTabLeft">向左移动</Item>
+		<Item English_Text = "Move right" ID = "ClipboardTabRight">向右移动</Item>
+		<Item English_Text = "Unpin tab (keep group and clips)" ID = "ClipboardTabUnpin">取消顶部显示（保留分组和内容）</Item>
+		<Item English_Text = "Enter a tab name." ID = "ClipboardTabNameRequired">请输入标签名称。</Item>
+		<Item English_Text = "A group with this name already exists. Use Pin existing group from the + menu." ID = "ClipboardTabNameExists">已有同名分组，请使用＋菜单中的“固定已有分组到标签栏”。</Item>
+		<Item English_Text = "The change could not be saved. Please try again." ID = "ClipboardTabSaveFailed">保存失败，请重试。</Item>
+		<Item English_Text = "Ctrl+Tab / Ctrl+Shift+Tab switches clipboard tabs" ID = "ClipboardTabShortcuts">启用 Ctrl+Tab / Ctrl+Shift+Tab 切换顶部标签</Item>
 	</Ditto_String_Table>
 	<Ditto_Options_Sheet>
 		<Item English_Text = "OK" ID = "1">确定</Item>
