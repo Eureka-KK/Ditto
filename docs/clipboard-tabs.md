@@ -1,0 +1,39 @@
+# Clipboard tabs, first version
+
+## Use
+
+- Open Ditto with its normal activation shortcut: the History tab is selected.
+- Use + to create a named tab or pin an existing group. Tabs reuse group IDs and the existing clip records.
+- Right-click a custom tab to rename it, move it left/right or unpin it. Unpinning keeps its group and contents.
+- Right-click selected clips > Add to tab, or press Ctrl+M. A configured existing Ctrl+M action takes priority.
+- The destination menu includes New tab, which creates a tab and assigns the selection.
+- A clip belongs to one custom group and also remains in History. Adding it to another tab changes its group; it does not clone its payload.
+- Added clips are marked Never Auto Delete. Normal clipboard capture continues to use the existing copy pipeline; selecting a tab does not route new copies into it. Existing explicit copy-to-group shortcuts still work.
+- Ctrl+Tab and Ctrl+Shift+Tab cycle tabs. The switch is enabled by default in Options > Quick Paste. Disabling it restores the previous Ctrl+Tab focus behavior.
+- Right-click one clip > Edit note. Notes appear before the original preview and are included in searches. Notes are not pasted. Emptying a note removes it.
+- New controls have Simplified Chinese translations when that language pack is selected.
+
+## Storage and resource usage
+
+The existing Main table gains two additive columns: clipNote (text, empty by default) and quickPasteTabOrder (integer, zero by default). The latter is used on group rows only. Upgrade checks column existence and can resume after a partial upgrade. A partial index contains pinned groups only. No existing payload or description is rewritten by the upgrade.
+
+All tabs share the original list and its existing asynchronous row cache. There are no new services, polling timers, worker threads, thumbnail caches or copies of clipboard payloads. Only pinned group IDs/names and notes for loaded rows are held in memory. Native tab controls and notes have a small additional memory cost; the amount requires a running build to measure.
+
+A full database backup contains the new metadata. Existing individual clip import/export formats have not been extended to carry notes or tab pin order. Explicit group-opening shortcuts and the existing open-by-active-application option retain their behavior.
+
+## Validation
+
+Run `python -m unittest discover -s tests -v`. The tests execute the production SQL against Ditto's original schema, covering upgrades, unchanged payloads, complete history, reassignment, note Unicode/quotes, rank swaps, unpinning, rollback and the partial index.
+
+Build the original solution with a matching Visual C++ toolset, MFC and NuGet dependencies. The tab validation workflow uses the installed v143 toolset on a Windows runner without changing the upstream project toolset.
+
+Native acceptance checks still required after a successful build:
+
+1. Create two tabs, including a Chinese name and an ampersand. Switch with mouse and both shortcuts; close and reopen normally to confirm History.
+2. Disable/re-enable tab shortcuts. Check the existing focus action when disabled and a user-configured Ctrl+M action when present.
+3. Add multiple clips through the context menu and Ctrl+M, including creation of a new destination. Reassign and verify a single record remains in History.
+4. While viewing a custom tab, copy fresh text from another application and verify it is captured in History without automatic categorization.
+5. Rename, reorder, unpin, restart and repin. Confirm group contents survive.
+6. Add, search, change and clear a note. Double-click/Enter into an external text field; only the original payload should be pasted.
+7. Test narrow windows, overflowing tab names, 100/150/200% DPI and the existing list/search/group controls.
+8. Compare private bytes and working set at idle and after cycling tabs with the same database. No native measurements have been recorded yet.

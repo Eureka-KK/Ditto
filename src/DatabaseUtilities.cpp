@@ -6,6 +6,7 @@
 #include "CP_Main.h"
 #include "DatabaseUtilities.h"
 #include "ProcessPaste.h"
+#include "ClipboardTabSql.h"
 #include <io.h>
 #include "Path.h"
 #include "zlib.h"
@@ -284,6 +285,27 @@ void ReOrderStickyClips(int parentID, CppSQLite3DB& db)
 	CATCH_SQLITE_EXCEPTION
 }
 
+void EnsureClipboardTabsSchema(CppSQLite3DB& db)
+{
+	bool hasNote = false;
+	bool hasOrder = false;
+	{
+		CppSQLite3Query columns = db.execQuery(_T("PRAGMA table_info(Main)"));
+		while (!columns.eof())
+		{
+			CString name = columns.getStringField(_T("name"));
+			hasNote |= name.CompareNoCase(_T("clipNote")) == 0;
+			hasOrder |= name.CompareNoCase(_T("quickPasteTabOrder")) == 0;
+			columns.nextRow();
+		}
+	}
+	if (!hasNote)
+		db.execDML(ClipboardTabSql::AddNoteColumn);
+	if (!hasOrder)
+		db.execDML(ClipboardTabSql::AddOrderColumn);
+	db.execDML(ClipboardTabSql::CreateIndex);
+}
+
 BOOL ValidDB(CString csPath, BOOL bUpgrade)
 {
 	try
@@ -482,6 +504,7 @@ BOOL ValidDB(CString csPath, BOOL bUpgrade)
 		db.execDML(_T("CREATE INDEX IF NOT EXISTS Main_ShortCut2 on Main(lShortCut DESC, globalShortCut DESC)"));
 		db.execDML(_T("CREATE INDEX IF NOT EXISTS Main_MoveToGroup on Main(MoveToGroupShortCut DESC, GlobalMoveToGroupShortCut DESC)"));
 		db.execDML(_T("CREATE INDEX IF NOT EXISTS Main_CRC on Main(CRC ASC)"));
+		EnsureClipboardTabsSchema(db);
 	}
 	CATCH_SQLITE_EXCEPTION_AND_RETURN(FALSE)
 
@@ -764,6 +787,7 @@ BOOL CreateDB(CString csFile)
 		db.execDML(_T("CREATE INDEX IF NOT EXISTS Main_ShortCut2 on Main(lShortCut DESC, globalShortCut DESC)"));
 		db.execDML(_T("CREATE INDEX IF NOT EXISTS Main_MoveToGroup on Main(MoveToGroupShortCut DESC, GlobalMoveToGroupShortCut DESC)"));
 		db.execDML(_T("CREATE INDEX IF NOT EXISTS Main_CRC on Main(CRC ASC)"));
+		EnsureClipboardTabsSchema(db);
 
 		db.close();
 	}

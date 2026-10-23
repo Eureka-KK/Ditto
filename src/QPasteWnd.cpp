@@ -23,6 +23,7 @@
 #include "Path.h"
 #include "ProcessPaste.h"
 #include "QPasteWnd.h"
+#include "ClipboardTabSql.h"
 #include "SendMail.h"
 #include <algorithm>
 #include <signal.h>
@@ -94,6 +95,13 @@ CQPasteWnd::~CQPasteWnd()
 }
 
 BEGIN_MESSAGE_MAP(CQPasteWnd, CWndEx)
+	ON_NOTIFY(TCN_SELCHANGE, IDC_CLIPBOARD_TABS, OnClipboardTabChanged)
+	ON_NOTIFY(NM_RCLICK, IDC_CLIPBOARD_TABS, OnClipboardTabMenu)
+	ON_BN_CLICKED(IDC_CLIPBOARD_TAB_ADD, OnNewClipboardTab)
+	ON_COMMAND(ID_CLIPBOARD_TAB_NEW, OnCreateClipboardTabAndAdd)
+	ON_COMMAND(ID_CLIPBOARD_TAB_ADD, OnAddToClipboardTab)
+	ON_COMMAND(ID_CLIPBOARD_NOTE, OnEditClipboardNote)
+	ON_COMMAND_RANGE(ID_CLIPBOARD_TAB_DEST_FIRST, ID_CLIPBOARD_TAB_DEST_LAST, OnClipboardTabDestination)
 	//{{AFX_MSG_MAP(CQPasteWnd)
 	ON_WM_ERASEBKGND()
 	ON_WM_CREATE()
@@ -413,6 +421,12 @@ int CQPasteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 	SetWindowText(_T(QPASTE_TITLE));
 
+	if (!m_clipboardTabs.Create(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_SINGLELINE | TCS_FOCUSNEVER,
+		CRect(0, 0, 0, 0), this, IDC_CLIPBOARD_TABS) ||
+		!m_addClipboardTab.Create(_T("+"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+			CRect(0, 0, 0, 0), this, IDC_CLIPBOARD_TAB_ADD))
+		return -1;
+
 	m_search.Create(WS_TABSTOP | WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, CRect(0, 0, 0, 0), this, ID_EDIT_SEARCH);
 	m_search.SetDpiInfo(&m_DittoWindow.m_dpi);
 	m_search.SetPromptText(theApp.m_Language.GetString(_T("Search"), _T("Search")));
@@ -672,17 +686,21 @@ void CQPasteWnd::MoveControls()
 	int cy = crRect.Height();
 
 	//Hide the two pixels of space at the top, not sure where this is coming from
-	int topOfListBox = 0;
+	int tabHeight = m_DittoWindow.m_dpi.Scale(30);
+	int addWidth = m_DittoWindow.m_dpi.Scale(26);
+	m_clipboardTabs.MoveWindow(0, 0, max(1, cx - addWidth), tabHeight);
+	m_addClipboardTab.MoveWindow(max(0, cx - addWidth), 0, min(cx, addWidth), tabHeight);
+	int topOfListBox = tabHeight;
 
 	if (theApp.m_GroupID > 0 && m_bShowStarredClips == false)
 	{
 		m_stGroup.ShowWindow(SW_SHOW);
 		m_BackButton.ShowWindow(SW_SHOW);
 
-		m_BackButton.MoveWindow(m_DittoWindow.m_dpi.Scale(2), m_DittoWindow.m_dpi.Scale(2), m_DittoWindow.m_dpi.Scale(16), m_DittoWindow.m_dpi.Scale(16));
-		m_stGroup.MoveWindow(m_DittoWindow.m_dpi.Scale(24), m_DittoWindow.m_dpi.Scale(2), cx - m_DittoWindow.m_dpi.Scale(20), m_DittoWindow.m_dpi.Scale(16));
+		m_BackButton.MoveWindow(m_DittoWindow.m_dpi.Scale(2), tabHeight + m_DittoWindow.m_dpi.Scale(2), m_DittoWindow.m_dpi.Scale(16), m_DittoWindow.m_dpi.Scale(16));
+		m_stGroup.MoveWindow(m_DittoWindow.m_dpi.Scale(24), tabHeight + m_DittoWindow.m_dpi.Scale(2), cx - m_DittoWindow.m_dpi.Scale(20), m_DittoWindow.m_dpi.Scale(16));
 
-		topOfListBox = m_DittoWindow.m_dpi.Scale(20);
+		topOfListBox += m_DittoWindow.m_dpi.Scale(20);
 	}
 	else
 	{
@@ -1458,6 +1476,7 @@ void CQPasteWnd::UpdateStatus(bool bRepaintImmediately)
 
 BOOL CQPasteWnd::FillList(CString csSQLSearch)
 {
+	ReloadClipboardTabs();
 	KillTimer(TIMER_DO_SEARCH);
 
 	m_lstHeader.HidePopup(true);
@@ -1492,22 +1511,11 @@ BOOL CQPasteWnd::FillList(CString csSQLSearch)
 			"Main.bIsGroup ASC, "
 			"Main.clipOrder DESC";
 
-		if (CGetSetOptions::m_bShowAllClipsInMainList)
-		{
-			if (CGetSetOptions::GetShowGroupsInMainList())
-			{
-				//found to be slower on large databases
-				strFilter = "((Main.bIsGroup = 1 AND Main.lParentID = -1) OR Main.bIsGroup = 0)";
-			}
-			else
-			{
-				strFilter = "(Main.bIsGroup = 0)";
-			}
-		}
+		// History includes categorized clips without duplicating their payloads.
+		if (CGetSetOptions::GetShowGroupsInMainList())
+			strFilter = _T("((Main.bIsGroup = 1 AND Main.lParentID = -1) OR Main.bIsGroup = 0)");
 		else
-		{
-			strFilter = "((Main.bIsGroup = 1 AND Main.lParentID = -1) OR (Main.bIsGroup = 0 AND Main.lParentID = -1))";
-		}
+			strFilter = ClipboardTabSql::HistoryFilter;
 	}
 	else
 		// it's some other group
@@ -1635,6 +1643,11 @@ BOOL CQPasteWnd::FillList(CString csSQLSearch)
 			strFilter += fullTextSql;
 		}
 
+		CFormatSQL noteFormat;
+		noteFormat.SetVariable("Main.clipNote");
+		noteFormat.Parse(csSQLSearch);
+		strFilter += _T(" OR ");
+		strFilter += noteFormat.GetSQLString();
 		strFilter += _T(")");
 
 		if (strParentFilter.IsEmpty() == FALSE)
@@ -1662,7 +1675,7 @@ BOOL CQPasteWnd::FillList(CString csSQLSearch)
 
 	sql.Format(_T("SELECT %s Main.lID, Main.mText, Main.lParentID, Main.lDontAutoDelete, ")
 		_T("Main.lShortCut, Main.bIsGroup, Main.QuickPasteText, Main.clipOrder, Main.clipGroupOrder, ")
-		_T("Main.stickyClipOrder, Main.stickyClipGroupOrder, Main.lDate, Main.lastPasteDate FROM Main %s ")
+		_T("Main.stickyClipOrder, Main.stickyClipGroupOrder, Main.lDate, Main.lastPasteDate, Main.clipNote FROM Main %s ")
 		_T("where %s order by %s"), IsDistinct, dataJoin, strFilter, csSort);
 
 
@@ -1732,6 +1745,7 @@ void CQPasteWnd::ShowRightClickMenu()
 		AddShowStarredClipsMenuItem(cmSubMenu);
 
 		theApp.m_Language.UpdateRightClickMenu(cmSubMenu);
+		AddClipboardTabCommands(cmSubMenu);
 
 		if (m_bShowStarredClips)
 		{
@@ -2000,6 +2014,7 @@ void CQPasteWnd::SetMenuChecks(CMenu* pMenu)
 	if (CGetSetOptions::m_bShowAllClipsInMainList)
 	{
 		pMenu->CheckMenuItem(ID_MENU_QUICKOPTIONS_SHOWCLIPSTHATAREINGROUPSINMAINLIST, MF_CHECKED);
+		pMenu->EnableMenuItem(ID_MENU_QUICKOPTIONS_SHOWCLIPSTHATAREINGROUPSINMAINLIST, MF_BYCOMMAND | MF_GRAYED);
 	}
 
 	if (CGetSetOptions::GetPromptWhenDeletingClips())
@@ -2213,6 +2228,8 @@ void CQPasteWnd::UpdateFont()
 	m_SearchFont.DeleteObject();
 	m_SearchFont.CreateFont(-m_DittoWindow.m_dpi.Scale(15), 0, 0, 0, 400, 0, 0, 0, DEFAULT_CHARSET, 3, 2, 1, 34, _T("Segoe UI"));
 	m_search.SetFont(&m_SearchFont);
+	m_clipboardTabs.SetFont(&m_SearchFont);
+	m_addClipboardTab.SetFont(&m_SearchFont);
 	m_search.SetPromptFont(m_SearchFont);
 
 	m_GroupTree.SetFont(&m_SearchFont);
@@ -2735,7 +2752,7 @@ void CQPasteWnd::OnMenuQuickoptionsEnsureentirewindowisvisible()
 
 void CQPasteWnd::OnMenuQuickoptionsShowclipsthatareingroupsinmainlist()
 {
-	CGetSetOptions::SetShowAllClipsInMainList(!CGetSetOptions::m_bShowAllClipsInMainList);
+	CGetSetOptions::SetShowAllClipsInMainList(TRUE); // Complete history is required for tabs.
 
 	CString csText;
 	m_search.GetWindowText(csText);
@@ -3114,6 +3131,20 @@ BOOL CQPasteWnd::PreTranslateMessage(MSG* pMsg)
 
 bool CQPasteWnd::CheckActions(MSG* pMsg)
 {
+	// Window-local only. The legacy Ctrl+Tab focus action still works when disabled.
+	if (pMsg->message == WM_KEYDOWN && pMsg->wParam == VK_TAB &&
+		CGetSetOptions::m_enableClipboardTabShortcuts &&
+		(GetKeyState(VK_CONTROL) & 0x8000) && !(GetKeyState(VK_MENU) & 0x8000))
+	{
+		if (!(pMsg->lParam & 0x40000000))
+		{
+			int count = (int)m_clipboardTabGroups.size() + 1;
+			int current = max(0, m_clipboardTabs.GetCurSel());
+			int direction = (GetKeyState(VK_SHIFT) & 0x8000) ? -1 : 1;
+			SelectClipboardTab((current + direction + count) % count);
+		}
+		return true;
+	}
 	bool ret = false;
 	CAccel a;
 
@@ -3141,6 +3172,13 @@ bool CQPasteWnd::CheckActions(MSG* pMsg)
 		}
 	}
 
+	if (!ret && pMsg->message == WM_KEYDOWN && pMsg->wParam == 'M' &&
+		CAccels::GetKeyStateModifiers() == HOTKEYF_CONTROL)
+	{
+		if (!(pMsg->lParam & 0x40000000))
+			ShowClipboardTabAddMenu();
+		return true;
+	}
 	return ret;
 }
 
@@ -5738,7 +5776,10 @@ void CQPasteWnd::GetDispInfo(NMHDR* pNMHDR, LRESULT* pResult)
 					}
 
 					// pipe is the "end of symbols" marker
-					cs += "|" + CMainTableFunctions::GetDisplayText(CGetSetOptions::m_nLinesPerRow, m_listItems[pItem->iItem].m_Desc);
+					CString display = m_listItems[pItem->iItem].m_Desc;
+					if (!m_listItems[pItem->iItem].m_note.IsEmpty())
+						display = m_listItems[pItem->iItem].m_note + _T(" - ") + display;
+					cs += "|" + CMainTableFunctions::GetDisplayText(CGetSetOptions::m_nLinesPerRow, display);
 
 					lstrcpyn(pItem->pszText, cs, pItem->cchTextMax);
 					pItem->pszText[pItem->cchTextMax - 1] = '\0';
@@ -6505,6 +6546,7 @@ void CQPasteWnd::FillMainTable(CMainTable& table, CppSQLite3Query& q)
 {
 	table.m_lID = q.getIntField(_T("lID"));
 	table.m_Desc = q.fieldValue(_T("mText"));
+	table.m_note = q.getStringField(_T("clipNote"), _T(""));
 	table.m_bHasParent = q.getIntField(_T("lParentID")) >= 0;
 	table.m_bDontAutoDelete = q.getIntField(_T("lDontAutoDelete")) > 0;
 	table.m_bHasShortCut = q.getIntField(_T("lShortCut")) > 0;

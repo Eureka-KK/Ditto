@@ -51,6 +51,10 @@ void CGroupName::OnOK()
 BOOL CGroupName::OnInitDialog() 
 {
 	CDialog::OnInitDialog();
+	if (!m_title.IsEmpty())
+		SetWindowText(m_title);
+	if (m_maxLength > 0)
+		((CEdit*)GetDlgItem(IDC_NAME))->LimitText(m_maxLength);
 
 	CWnd *pWnd = GetDlgItem(IDC_NAME);
 	if(pWnd)

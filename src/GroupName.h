@@ -20,6 +20,8 @@ public:
 	//{{AFX_DATA(CGroupName)
 	enum { IDD = IDD_GROUP_NAME };
 	CString	m_csName;
+	CString m_title;
+	int m_maxLength = 0;
 	//}}AFX_DATA
 
 

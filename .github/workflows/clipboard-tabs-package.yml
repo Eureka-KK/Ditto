@@ -1,0 +1,39 @@
+name: Package clipboard tabs test build
+
+on:
+  push:
+    branches: [feature/clipboard-tabs]
+    paths: [.github/workflows/clipboard-tabs-package.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Ditto-clipboard-tabs-x64-unsigned
+          run-id: 39968964321
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: package
+      - name: Include portable resources and matching runtime
+        shell: pwsh
+        run: |
+          foreach ($name in @('mfc140u.dll','vcruntime140.dll','vcruntime140_1.dll','msvcp140.dll')) {
+            Copy-Item -LiteralPath (Join-Path $env:WINDIR "System32/$name") -Destination package
+          }
+          Copy-Item -LiteralPath Debug/Language -Destination package/Language -Recurse
+          Copy-Item -LiteralPath Debug/Themes -Destination package/Themes -Recurse
+          Copy-Item -LiteralPath DittoSetup/portable -Destination package/portable
+          Copy-Item -LiteralPath LICENSE -Destination package/LICENSE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ditto-clipboard-tabs-v1-portable-x64
+          path: package/
+          if-no-files-found: error

@@ -89,7 +89,10 @@ BOOL COptionsQuickPaste::OnInitDialog()
 	m_btDrawRTF.SetCheck(CGetSetOptions::m_bDrawRTF);
 
 	m_EnsureEntireWindowVisible.SetCheck(CGetSetOptions::m_bEnsureEntireWindowCanBeSeen);
-	m_ShowAllInMainList.SetCheck(CGetSetOptions::m_bShowAllClipsInMainList);
+	m_ShowAllInMainList.SetCheck(BST_CHECKED);
+	m_ShowAllInMainList.EnableWindow(FALSE); // History always includes categorized clips.
+	CheckDlgButton(IDC_CLIPBOARD_TAB_SHORTCUTS, CGetSetOptions::m_enableClipboardTabShortcuts ? BST_CHECKED : BST_UNCHECKED);
+	SetDlgItemText(IDC_CLIPBOARD_TAB_SHORTCUTS, theApp.m_Language.GetString(_T("ClipboardTabShortcuts"), _T("Ctrl+Tab / Ctrl+Shift+Tab switches clipboard tabs")));
 	m_FindAsYouType.SetCheck(CGetSetOptions::m_bFindAsYouType);
 
 	if(CGetSetOptions::GetQuickPastePosition() == POS_AT_CARET)
@@ -152,7 +155,7 @@ BOOL COptionsQuickPaste::OnApply()
 	CGetSetOptions::SetDrawThumbnail(m_btShowThumbnails.GetCheck());
 	CGetSetOptions::SetDrawRTF(m_btDrawRTF.GetCheck());
 	CGetSetOptions::SetEnsureEntireWindowCanBeSeen(m_EnsureEntireWindowVisible.GetCheck());
-	CGetSetOptions::SetShowAllClipsInMainList(m_ShowAllInMainList.GetCheck());
+	CGetSetOptions::SetClipboardTabShortcuts(IsDlgButtonChecked(IDC_CLIPBOARD_TAB_SHORTCUTS) == BST_CHECKED);
 	CGetSetOptions::SetFindAsYouType(m_FindAsYouType.GetCheck());
 	CGetSetOptions::SetPromptWhenDeletingClips(m_PromptForDelete.GetCheck());
 	CGetSetOptions::SetPasteAsAdmin(m_elevatedPrivileges.GetCheck());

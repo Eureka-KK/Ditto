@@ -99,6 +99,9 @@ public:
 	static long GetResolutionProfileLong(CString csName, long lDefaultValue, CString csNewPath = _T(""));
 	static BOOL SetResolutionProfileLong(CString csName, long lValue);
 
+	static BOOL m_enableClipboardTabShortcuts;
+	static void SetClipboardTabShortcuts(BOOL value);
+
 	static BOOL SetProfileLong(CString csName, long lValue);
 	static long GetProfileLong(CString csName, long lDefaultValue = -1, CString csNewPath = _T(""));
 
