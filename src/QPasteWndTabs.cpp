@@ -174,8 +174,8 @@ void CQPasteWnd::OnNewClipboardTab()
 	else if (command == 2)
 	{
 		CMoveToGroupDlg dialog(this, TabString(_T("ClipboardTabPin"), _T("Pin existing group")));
-		if (dialog.DoModal() == IDOK && dialog.m_nSelectedGroup > 0)
-			PinClipboardGroup(dialog.m_nSelectedGroup);
+		if (dialog.DoModal() == IDOK && dialog.GetSelectedGroup() > 0)
+			PinClipboardGroup(dialog.GetSelectedGroup());
 	}
 	m_lstHeader.SetFocus();
 }

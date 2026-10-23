@@ -2014,6 +2014,7 @@ void CQPasteWnd::SetMenuChecks(CMenu* pMenu)
 	if (CGetSetOptions::m_bShowAllClipsInMainList)
 	{
 		pMenu->CheckMenuItem(ID_MENU_QUICKOPTIONS_SHOWCLIPSTHATAREINGROUPSINMAINLIST, MF_CHECKED);
+		pMenu->EnableMenuItem(ID_MENU_QUICKOPTIONS_SHOWCLIPSTHATAREINGROUPSINMAINLIST, MF_BYCOMMAND | MF_GRAYED);
 	}
 
 	if (CGetSetOptions::GetPromptWhenDeletingClips())
@@ -2751,7 +2752,7 @@ void CQPasteWnd::OnMenuQuickoptionsEnsureentirewindowisvisible()
 
 void CQPasteWnd::OnMenuQuickoptionsShowclipsthatareingroupsinmainlist()
 {
-	CGetSetOptions::SetShowAllClipsInMainList(!CGetSetOptions::m_bShowAllClipsInMainList);
+	CGetSetOptions::SetShowAllClipsInMainList(TRUE); // Complete history is required for tabs.
 
 	CString csText;
 	m_search.GetWindowText(csText);
