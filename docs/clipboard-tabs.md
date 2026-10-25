@@ -6,6 +6,7 @@
 - Use + to create a named tab or pin an existing group. Tabs reuse group IDs and the existing clip records.
 - Right-click a custom tab to rename it, move it left/right or unpin it. Unpinning keeps its group and contents.
 - Right-click selected clips > Add to tab, or press Ctrl+M. A configured existing Ctrl+M action takes priority.
+- Drag one or more selected clips onto a custom tab. The destination highlights while hovering; release to assign the clips and show that tab. Escape cancels. History, the + button, the current custom tab and external drags are not destinations. Groups in a mixed selection are ignored. Dragging out to another application retains the existing paste behavior; internal assignment does not count as a paste.
 - The destination menu includes New tab, which creates a tab and assigns the selection.
 - A clip belongs to one custom group and also remains in History. Adding it to another tab changes its group; it does not clone its payload.
 - Added clips are marked Never Auto Delete. Normal clipboard capture continues to use the existing copy pipeline; selecting a tab does not route new copies into it. Existing explicit copy-to-group shortcuts still work.
@@ -37,3 +38,4 @@ Native acceptance checks still required after a successful build:
 6. Add, search, change and clear a note. Double-click/Enter into an external text field; only the original payload should be pasted.
 7. Test narrow windows, overflowing tab names, 100/150/200% DPI and the existing list/search/group controls.
 8. Compare private bytes and working set at idle and after cycling tabs with the same database. No native measurements have been recorded yet.
+9. Drag one/multiple clips from History and between custom tabs; confirm highlight, destination contents, notes, one payload per clip and Never Auto Delete. Cancel with Escape or release over History, +, a blank area or the current tab: contents stay unchanged. Groups alone cannot be dropped; mixed selections assign only clips. External drags onto tabs are rejected. Check overflowing tabs, DPI scaling and repeated open/close cycles, and confirm normal external drag paste still works and internal drops do not increment paste statistics.

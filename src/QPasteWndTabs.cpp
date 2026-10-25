@@ -49,6 +49,80 @@ bool AskTabText(CWnd* owner, CString& text, const CString& title, int limit, boo
 }
 }
 
+DROPEFFECT CClipboardTabDropTarget::OnDragEnter(CWnd* window, COleDataObject* data, DWORD keys, CPoint point)
+{
+	return OnDragOver(window, data, keys, point);
+}
+
+DROPEFFECT CClipboardTabDropTarget::OnDragOver(CWnd*, COleDataObject*, DWORD, CPoint point)
+{
+	return m_owner ? m_owner->UpdateClipboardTabDrop(point) : DROPEFFECT_NONE;
+}
+
+void CClipboardTabDropTarget::OnDragLeave(CWnd*)
+{
+	if (m_owner)
+		m_owner->ClearClipboardTabDropHighlight();
+}
+
+BOOL CClipboardTabDropTarget::OnDrop(CWnd*, COleDataObject*, DROPEFFECT, CPoint point)
+{
+	if (!m_owner || m_owner->UpdateClipboardTabDrop(point) == DROPEFFECT_NONE)
+		return FALSE;
+	m_owner->m_clipboardTabDropGroup = m_owner->m_clipboardTabGroups[m_owner->m_clipboardTabDropIndex - 1].groupId;
+	m_owner->m_clipboardTabDropAccepted = true;
+	m_owner->ClearClipboardTabDropHighlight();
+	// Save after DoDragDrop returns, outside OLE callbacks and delayed rendering.
+	return TRUE;
+}
+
+void CQPasteWnd::BeginClipboardTabDrag(const CClipIDs& ids)
+{
+	ClearClipboardTabDropHighlight();
+	m_clipboardTabDragIds.RemoveAll();
+	m_clipboardTabDropGroup = -1;
+	m_clipboardTabDropAccepted = false;
+	try
+	{
+		for (INT_PTR i = 0; i < ids.GetCount(); ++i)
+			if (theApp.m_db.execScalarEx(_T("SELECT COUNT(*) FROM Main WHERE lID = %d AND bIsGroup = 0"), ids[(int)i]) > 0)
+				m_clipboardTabDragIds.Add(ids[(int)i]);
+	}
+	catch (CppSQLite3Exception&)
+	{
+		m_clipboardTabDragIds.RemoveAll();
+		Log(_T("Unable to prepare clipboard tab drag"));
+	}
+}
+
+DROPEFFECT CQPasteWnd::UpdateClipboardTabDrop(CPoint point)
+{
+	TCHITTESTINFO hit = {};
+	hit.pt = point;
+	int index = m_clipboardTabs.HitTest(&hit);
+	if (m_clipboardTabDragIds.GetCount() == 0 || index <= 0 ||
+		index > (int)m_clipboardTabGroups.size() ||
+		m_clipboardTabGroups[index - 1].groupId == theApp.m_GroupID)
+		index = -1;
+	if (index != m_clipboardTabDropIndex)
+	{
+		ClearClipboardTabDropHighlight();
+		if (index > 0)
+		{
+			m_clipboardTabDropIndex = index;
+			m_clipboardTabs.HighlightItem(index, TRUE);
+		}
+	}
+	return index > 0 ? DROPEFFECT_COPY : DROPEFFECT_NONE;
+}
+
+void CQPasteWnd::ClearClipboardTabDropHighlight()
+{
+	if (m_clipboardTabs.GetSafeHwnd() && m_clipboardTabDropIndex > 0)
+		m_clipboardTabs.HighlightItem(m_clipboardTabDropIndex, FALSE);
+	m_clipboardTabDropIndex = -1;
+}
+
 void CQPasteWnd::ReloadClipboardTabs()
 {
 	if (!m_clipboardTabs.GetSafeHwnd())
@@ -251,6 +325,19 @@ void CQPasteWnd::OnClipboardTabDestination(UINT command)
 	int target = m_clipboardTabGroups[index].groupId;
 	CClipIDs ids;
 	m_lstHeader.GetSelectionItemData(ids);
+	if (AssignClipsToClipboardTab(target, ids))
+	{
+		CString search;
+		m_search.GetWindowText(search);
+		FillList(search); // Retain the current tab and filter; no duplicate payload is created.
+	}
+}
+
+bool CQPasteWnd::AssignClipsToClipboardTab(int target, const CClipIDs& ids)
+{
+	if (target <= 0 || ids.GetCount() == 0)
+		return false;
+	int changed = 0;
 	bool transaction = false;
 	try
 	{
@@ -264,7 +351,7 @@ void CQPasteWnd::OnClipboardTabDestination(UINT command)
 			update.bind(3, (int)CTime::GetCurrentTime().GetTime());
 			update.bind(4, (int)ids[i - 1]);
 			update.bind(5, target);
-			update.execDML();
+			changed += update.execDML();
 			update.reset();
 		}
 		theApp.m_db.execDML(_T("COMMIT"));
@@ -278,11 +365,9 @@ void CQPasteWnd::OnClipboardTabDestination(UINT command)
 			catch (CppSQLite3Exception&) {}
 		}
 		MessageBox(TabString(_T("ClipboardTabSaveFailed"), _T("The change could not be saved. Please try again.")), _T("Ditto"), MB_OK | MB_ICONERROR);
-		return;
+		return false;
 	}
-	CString search;
-	m_search.GetWindowText(search);
-	FillList(search); // Retain the current tab and filter; no duplicate payload is created.
+	return changed > 0;
 }
 
 void CQPasteWnd::OnEditClipboardNote()

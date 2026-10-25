@@ -90,7 +90,7 @@ BOOL CProcessPaste::DoPaste()
 	return ret;
 }
 
-BOOL CProcessPaste::DoDrag()
+BOOL CProcessPaste::DoDrag(const bool* internallyHandled)
 {
 	BOOL ret = FALSE;
 	try
@@ -100,7 +100,8 @@ BOOL CProcessPaste::DoDrag()
 		DROPEFFECT de = m_pOle->DoDragDrop(DROPEFFECT_COPY);
 		if (de != DROPEFFECT_NONE)
 		{
-			MarkAsPasted(m_pasteOptions.m_updateClipOrder);
+			if (internallyHandled == nullptr || !*internallyHandled)
+				MarkAsPasted(m_pasteOptions.m_updateClipOrder);
 			ret = TRUE;
 		}		
 	}

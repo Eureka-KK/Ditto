@@ -427,6 +427,10 @@ int CQPasteWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 			CRect(0, 0, 0, 0), this, IDC_CLIPBOARD_TAB_ADD))
 		return -1;
 
+	m_clipboardTabDropTarget.m_owner = this;
+	if (!m_clipboardTabDropTarget.Register(&m_clipboardTabs))
+		return -1;
+
 	m_search.Create(WS_TABSTOP | WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, CRect(0, 0, 0, 0), this, ID_EDIT_SEARCH);
 	m_search.SetDpiInfo(&m_DittoWindow.m_dpi);
 	m_search.SetPromptText(theApp.m_Language.GetString(_T("Search"), _T("Search")));
@@ -5668,11 +5672,31 @@ void CQPasteWnd::OnBegindrag(NMHDR* pNMHDR, LRESULT* pResult)
 		clips.Add(m_lstHeader.GetItemData(pLV->iItem));
 	}
 
+	BeginClipboardTabDrag(clips);
 	this->SetTimer(TIMER_DRAG_HIDE_WINDOW, 500, NULL);
 
-	paste.DoDrag();
+	// Keep the source popup alive when the OLE loop moves focus to its tab strip.
+	const bool previousHide = m_bHideWnd;
+	m_bHideWnd = false;
+	paste.DoDrag(&m_clipboardTabDropAccepted);
+	m_bHideWnd = previousHide;
 
 	KillTimer(TIMER_DRAG_HIDE_WINDOW);
+	ClearClipboardTabDropHighlight();
+
+	if (m_clipboardTabDropAccepted &&
+		AssignClipsToClipboardTab(m_clipboardTabDropGroup, m_clipboardTabDragIds))
+	{
+		for (size_t i = 0; i < m_clipboardTabGroups.size(); ++i)
+			if (m_clipboardTabGroups[i].groupId == m_clipboardTabDropGroup)
+			{
+				SelectClipboardTab((int)i + 1);
+				break;
+			}
+	}
+	m_clipboardTabDragIds.RemoveAll();
+	m_clipboardTabDropGroup = -1;
+	m_clipboardTabDropAccepted = false;
 
 
 	if (CGetSetOptions::m_bShowPersistent)
@@ -6562,6 +6586,8 @@ void CQPasteWnd::FillMainTable(CMainTable& table, CppSQLite3Query& q)
 
 void CQPasteWnd::OnDestroy()
 {
+	m_clipboardTabDropTarget.Revoke();
+	m_clipboardTabDropTarget.m_owner = nullptr;
 	CGetSetOptions::SetPastSearchXml(m_search.SavePastSearches());
 
 	CWndEx::OnDestroy();

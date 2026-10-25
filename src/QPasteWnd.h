@@ -21,6 +21,20 @@
 #include "Popup.h"
 #include "CustomFriendsHelper.h"
 #include "ModernScrollBar.h"
+#include <afxole.h>
+
+class CQPasteWnd;
+
+// Only the tab strip accepts clips from this window's active OLE drag.
+class CClipboardTabDropTarget : public COleDropTarget
+{
+public:
+	CQPasteWnd* m_owner = nullptr;
+	DROPEFFECT OnDragEnter(CWnd*, COleDataObject*, DWORD, CPoint point) override;
+	DROPEFFECT OnDragOver(CWnd*, COleDataObject*, DWORD, CPoint point) override;
+	void OnDragLeave(CWnd*) override;
+	BOOL OnDrop(CWnd*, COleDataObject*, DROPEFFECT, CPoint point) override;
+};
 
 class CMainTable
 {
@@ -133,6 +147,15 @@ public:
 	CTabCtrl m_clipboardTabs;
 	CButton m_addClipboardTab;
 	std::vector<ClipboardTab> m_clipboardTabGroups;
+	CClipboardTabDropTarget m_clipboardTabDropTarget;
+	CClipIDs m_clipboardTabDragIds;
+	int m_clipboardTabDropIndex = -1;
+	int m_clipboardTabDropGroup = -1;
+	bool m_clipboardTabDropAccepted = false;
+	void BeginClipboardTabDrag(const CClipIDs& ids);
+	DROPEFFECT UpdateClipboardTabDrop(CPoint point);
+	void ClearClipboardTabDropHighlight();
+	bool AssignClipsToClipboardTab(int target, const CClipIDs& ids);
 	void ReloadClipboardTabs();
 	void SyncClipboardTabSelection();
 	void SelectClipboardTab(int index);
