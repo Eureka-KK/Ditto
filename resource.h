@@ -877,14 +877,32 @@
 #define ID_SPECIALPASTE_PASTEASIMAGE    33001
 #define ID_MENU_GOTOENTRY               33002
 
+// Clipboard tab controls and commands. Destination IDs are menu-local indexes.
+#define IDC_CLIPBOARD_TABS              2180
+#define IDC_CLIPBOARD_TAB_ADD           2181
+#define IDC_CLIPBOARD_TAB_SHORTCUTS     2182
+#define IDD_WALLPAPER_OPTIONS           394
+#define IDC_WALLPAPER_OPTIONS           2183
+#define IDC_WALLPAPER_ENABLED           2184
+#define IDC_WALLPAPER_PATH              2185
+#define IDC_WALLPAPER_BROWSE            2186
+#define IDC_WALLPAPER_MASK              2187
+#define IDC_WALLPAPER_MASK_LABEL        2188
+#define IDC_WALLPAPER_HINT              2189
+#define ID_CLIPBOARD_TAB_NEW            33010
+#define ID_CLIPBOARD_TAB_ADD            33011
+#define ID_CLIPBOARD_NOTE               33012
+#define ID_CLIPBOARD_TAB_DEST_FIRST     42000
+#define ID_CLIPBOARD_TAB_DEST_LAST      59999
+
 // Next default values for new objects
 //
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        394
-#define _APS_NEXT_COMMAND_VALUE         33002
-#define _APS_NEXT_CONTROL_VALUE         2174
+#define _APS_NEXT_RESOURCE_VALUE        395
+#define _APS_NEXT_COMMAND_VALUE         33013
+#define _APS_NEXT_CONTROL_VALUE         2190
 #define _APS_NEXT_SYMED_VALUE           104
 #endif
 #endif

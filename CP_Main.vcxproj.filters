@@ -289,6 +289,9 @@
     <ClCompile Include="src\QListCtrl.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\QPasteWndTabs.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="src\QPasteWnd.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -803,6 +806,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\QListCtrl.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ClipboardTabSql.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\QPasteWnd.h">

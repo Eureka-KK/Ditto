@@ -50,6 +50,7 @@ public:
     bool OnMsg(MSG *pMsg, CAccel &a);
 
 	bool ContainsKey(int vKey);
+	bool ContainsShortcut(DWORD key) const;
 
 	bool m_handleRepeatKeys;
 	bool m_checkModifierKeys;

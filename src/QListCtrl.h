@@ -14,6 +14,9 @@
 #include "Accels.h"
 #include "GdiImageDrawer.h"
 #include "DPI.h"
+#include <memory>
+
+namespace Gdiplus { class Bitmap; }
 
 #define NM_SEARCH_ENTER_PRESSED		WM_USER+0x100
 #define NM_RIGHT					WM_USER+0x101
@@ -78,6 +81,14 @@ class CQListCtrl : public CListCtrl
 // Construction
 public:
 	CQListCtrl();
+	void LoadWallpaper();
+	void UnloadWallpaper();
+	bool DrawWallpaper(CDC* dc, const CRect& clip);
+	std::unique_ptr<Gdiplus::Bitmap> m_wallpaperImage;
+	std::unique_ptr<Gdiplus::Bitmap> m_wallpaperSurface;
+	CSize m_wallpaperViewport = CSize(0, 0);
+	int m_wallpaperMask = 85;
+	afx_msg void OnWallpaperScrolled(NMHDR*, LRESULT* result);
 
 // Attributes
 public:

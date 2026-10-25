@@ -492,6 +492,10 @@ LRESULT CMainFrame::OnHotKey(WPARAM wParam, LPARAM lParam)
 
 void CMainFrame::ShowQPasteWithActiveWindowCheck()
 {
+	if (theApp.QPasteWnd())
+		theApp.QPasteWnd()->ResetClipboardTabsToHistory();
+	else
+		theApp.EnterGroupID(-1);
 	//Before we show our window find the current focused window for paste into
 	theApp.m_activeWnd.TrackActiveWnd(true);
 
@@ -519,7 +523,8 @@ void CMainFrame::ShowQPasteWithActiveWindowCheck()
 		}
 	}
 
-	m_quickPaste.ShowQPasteWnd(this, false, true, FALSE);
+	// The quick-paste hotkey should reopen the window where the user last left it.
+	m_quickPaste.ShowQPasteWnd(this, true, true, FALSE);
 }
 
 void CMainFrame::DoTextOnlyPaste()

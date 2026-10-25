@@ -102,6 +102,10 @@ public:
 	afx_msg void OnEnChangePath();
 	afx_msg void OnClickedMaximumEntries();
 	afx_msg void OnClickedExpireEntries();
+	afx_msg void OnWallpaperOptions();
+	CString m_wallpaperPath;
+	BOOL m_wallpaperEnabled = FALSE;
+	int m_wallpaperMask = 85;
 };
 
 //{{AFX_INSERT_LOCATION}}

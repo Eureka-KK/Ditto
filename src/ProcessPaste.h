@@ -41,7 +41,7 @@ public:
 	CClipIDs& GetClipIDs() { return m_pOle->m_ClipIDs; }
 
 	BOOL DoPaste();
-	BOOL DoDrag();
+	BOOL DoDrag(const bool* internallyHandled = nullptr);
 
 	void MarkAsPasted(bool updateClipOrder);
 	static UINT MarkAsPastedThread(LPVOID pParam);
