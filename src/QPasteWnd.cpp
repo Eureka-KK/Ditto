@@ -887,6 +887,7 @@ void CQPasteWnd::OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized)
 
 BOOL CQPasteWnd::HideQPasteWindow(bool releaseFocus, BOOL clearSearchData)
 {
+	m_lstHeader.UnloadWallpaper();
 	if (clearSearchData = -1)
 	{
 		if ((CGetSetOptions::m_maintainSearchView || CGetSetOptions::m_refreshViewAfterPasting == false) &&
@@ -1005,6 +1006,7 @@ void CQPasteWnd::SaveWindowSize()
 
 BOOL CQPasteWnd::ShowQPasteWindow(BOOL bFillList)
 {
+	m_lstHeader.LoadWallpaper();
 	theApp.m_bShowingQuickPaste = true;
 
 	Log(StrF(_T("Start - ShowQPasteWindow - Fill List: %d, array count: %d"), bFillList, m_listItems.size()));
@@ -5620,6 +5622,8 @@ LRESULT CQPasteWnd::OnCancelFilter(WPARAM wParam, LPARAM lParam)
 
 LRESULT CQPasteWnd::OnPostOptions(WPARAM wParam, LPARAM lParam)
 {
+	if (IsWindowVisible())
+		m_lstHeader.LoadWallpaper();
 	UpdateFont();
 	LoadShortcuts();
 
@@ -8388,27 +8392,15 @@ bool CQPasteWnd::DoCopySelection()
 void CQPasteWnd::SetTransparency(int percent)
 {
 	if (percent > 0)
-	{
 		CGetSetOptions::SetTransparencyPercent(percent);
-		CGetSetOptions::SetEnableTransparency(TRUE);
-
-		m_Alpha.SetTransparent(TRUE);
-
-		float fPercent = percent / (float)100.0;
-
-		m_Alpha.SetOpacity(OPACITY_MAX - (int)(fPercent * OPACITY_MAX));
-	}
-	else
-	{
-		CGetSetOptions::SetEnableTransparency(FALSE);
-		m_Alpha.SetTransparent(FALSE);
-	}
+	CGetSetOptions::SetEnableTransparency(percent > 0);
+	SetCurrentTransparency();
 }
 
 void CQPasteWnd::SetCurrentTransparency()
 {
 	//Set the transparency
-	if (CGetSetOptions::GetEnableTransparency())
+	if (CGetSetOptions::GetEnableTransparency() && !m_lstHeader.m_wallpaperImage)
 	{
 		m_Alpha.SetTransparent(TRUE);
 

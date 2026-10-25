@@ -26,6 +26,87 @@ static char THIS_FILE[] = __FILE__;
 
 IMPLEMENT_DYNCREATE(COptionsGeneral, CPropertyPage)
 
+class CWallpaperOptionsDialog : public CDialog
+{
+public:
+	CString path;
+	BOOL enabled = FALSE;
+	int mask = 85;
+	explicit CWallpaperOptionsDialog(CWnd* owner) : CDialog(IDD_WALLPAPER_OPTIONS, owner) {}
+	BOOL OnInitDialog() override
+	{
+		CDialog::OnInitDialog();
+		SetWindowText(theApp.m_Language.GetString(_T("WallpaperOptions"), _T("Wallpaper and mask")));
+		SetDlgItemText(IDC_WALLPAPER_ENABLED, theApp.m_Language.GetString(_T("WallpaperEnabled"), _T("Enable wallpaper")));
+		SetDlgItemText(IDC_WALLPAPER_BROWSE, theApp.m_Language.GetString(_T("WallpaperBrowse"), _T("Browse...")));
+		SetDlgItemText(IDC_WALLPAPER_MASK_LABEL, theApp.m_Language.GetString(_T("WallpaperMask"), _T("Black mask (75-100%)")));
+		SetDlgItemText(IDC_WALLPAPER_HINT, theApp.m_Language.GetString(_T("WallpaperHint"), _T("White text over the masked image. Selected rows keep the theme highlight.")));
+		CheckDlgButton(IDC_WALLPAPER_ENABLED, enabled ? BST_CHECKED : BST_UNCHECKED);
+		SetDlgItemText(IDC_WALLPAPER_PATH, path);
+		SetDlgItemInt(IDC_WALLPAPER_MASK, mask);
+		return TRUE;
+	}
+	afx_msg void OnBrowse()
+	{
+		CFileDialog dialog(TRUE, _T("png"), nullptr, OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR,
+			_T("Images (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp||"), this);
+		if (dialog.DoModal() == IDOK)
+		{
+			SetDlgItemText(IDC_WALLPAPER_PATH, dialog.GetPathName());
+			CheckDlgButton(IDC_WALLPAPER_ENABLED, BST_CHECKED);
+		}
+	}
+	void OnOK() override
+	{
+		BOOL valid = FALSE;
+		mask = GetDlgItemInt(IDC_WALLPAPER_MASK, &valid, FALSE);
+		if (!valid || mask < 75 || mask > 100)
+		{
+			MessageBox(theApp.m_Language.GetString(_T("WallpaperMaskRange"), _T("Enter a mask opacity from 75 to 100.")), _T("Ditto"), MB_OK | MB_ICONINFORMATION);
+			return;
+		}
+		enabled = IsDlgButtonChecked(IDC_WALLPAPER_ENABLED) == BST_CHECKED;
+		GetDlgItemText(IDC_WALLPAPER_PATH, path);
+		if (enabled)
+		{
+			CFileStatus file;
+			bool validFile = !path.IsEmpty() && CFile::GetStatus(path, file) && file.m_size <= 32 * 1024 * 1024;
+			if (validFile)
+			{
+				Gdiplus::Bitmap image{CStringW(path)};
+				validFile = image.GetLastStatus() == Gdiplus::Ok && image.GetWidth() > 0 && image.GetHeight() > 0 &&
+					(ULONGLONG)image.GetWidth() * image.GetHeight() <= 64000000;
+			}
+			if (!validFile)
+			{
+				MessageBox(theApp.m_Language.GetString(_T("WallpaperInvalid"), _T("Choose a readable PNG, JPG or BMP image up to 32 MB and 64 megapixels.")), _T("Ditto"), MB_OK | MB_ICONERROR);
+				return;
+			}
+		}
+		CDialog::OnOK();
+	}
+	DECLARE_MESSAGE_MAP()
+};
+
+BEGIN_MESSAGE_MAP(CWallpaperOptionsDialog, CDialog)
+	ON_BN_CLICKED(IDC_WALLPAPER_BROWSE, OnBrowse)
+END_MESSAGE_MAP()
+
+void COptionsGeneral::OnWallpaperOptions()
+{
+	CWallpaperOptionsDialog dialog(this);
+	dialog.path = m_wallpaperPath;
+	dialog.enabled = m_wallpaperEnabled;
+	dialog.mask = m_wallpaperMask;
+	if (dialog.DoModal() == IDOK)
+	{
+		m_wallpaperPath = dialog.path;
+		m_wallpaperEnabled = dialog.enabled;
+		m_wallpaperMask = dialog.mask;
+		SetModified(TRUE);
+	}
+}
+
 COptionsGeneral::COptionsGeneral() : CPropertyPage(COptionsGeneral::IDD)
 {
 	m_csTitle = theApp.m_Language.GetString("GeneralTitle", "General");
@@ -67,6 +148,7 @@ void COptionsGeneral::DoDataExchange(CDataExchange* pDX)
 
 
 BEGIN_MESSAGE_MAP(COptionsGeneral, CPropertyPage)
+	ON_BN_CLICKED(IDC_WALLPAPER_OPTIONS, OnWallpaperOptions)
 	//{{AFX_MSG_MAP(COptionsGeneral)
 	ON_BN_CLICKED(IDC_GET_PATH, OnGetPath)
 	ON_BN_CLICKED(IDC_BUTTON_ABOUT, OnButtonAbout)
@@ -89,6 +171,10 @@ END_MESSAGE_MAP()
 BOOL COptionsGeneral::OnInitDialog() 
 {
 	CPropertyPage::OnInitDialog();
+	m_wallpaperPath = CGetSetOptions::GetProfileString(_T("ClipboardWallpaperPath"), _T(""));
+	m_wallpaperEnabled = CGetSetOptions::GetProfileLong(_T("ClipboardWallpaperEnabled"), FALSE);
+	m_wallpaperMask = max(75, min(100, (int)CGetSetOptions::GetProfileLong(_T("ClipboardWallpaperMask"), 85)));
+	SetDlgItemText(IDC_WALLPAPER_OPTIONS, theApp.m_Language.GetString(_T("WallpaperOptions"), _T("Wallpaper and mask...")));
 
 	CString url = _T("https://github.com/sabrogden/Ditto/wiki/Environment-Variables");
 
@@ -348,6 +434,9 @@ BOOL COptionsGeneral::OnApply()
 		m_pParent->m_themeChanged = TRUE;
 	}
 	
+	CGetSetOptions::SetProfileString(_T("ClipboardWallpaperPath"), m_wallpaperPath);
+	CGetSetOptions::SetProfileLong(_T("ClipboardWallpaperEnabled"), m_wallpaperEnabled);
+	CGetSetOptions::SetProfileLong(_T("ClipboardWallpaperMask"), m_wallpaperMask);
 	return CPropertyPage::OnApply();
 }
 

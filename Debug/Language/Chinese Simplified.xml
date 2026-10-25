@@ -459,6 +459,13 @@
 		<Item English_Text = "A group with this name already exists. Use Pin existing group from the + menu." ID = "ClipboardTabNameExists">已有同名分组，请使用＋菜单中的“固定已有分组到标签栏”。</Item>
 		<Item English_Text = "The change could not be saved. Please try again." ID = "ClipboardTabSaveFailed">保存失败，请重试。</Item>
 		<Item English_Text = "Ctrl+Tab / Ctrl+Shift+Tab switches clipboard tabs" ID = "ClipboardTabShortcuts">启用 Ctrl+Tab / Ctrl+Shift+Tab 切换顶部标签</Item>
+		<Item English_Text = "Wallpaper and mask" ID = "WallpaperOptions">壁纸与蒙版</Item>
+		<Item English_Text = "Enable wallpaper" ID = "WallpaperEnabled">启用壁纸</Item>
+		<Item English_Text = "Browse..." ID = "WallpaperBrowse">选择图片...</Item>
+		<Item English_Text = "Black mask (75-100%)" ID = "WallpaperMask">黑色蒙版浓度（75%～100%）</Item>
+		<Item English_Text = "White text over the masked image" ID = "WallpaperHint">蒙版上显示白色文字，选中条目保留主题高亮。</Item>
+		<Item English_Text = "Enter a mask opacity from 75 to 100." ID = "WallpaperMaskRange">请输入 75 到 100 之间的蒙版浓度。</Item>
+		<Item English_Text = "Choose a readable image." ID = "WallpaperInvalid">请选择可读取的 PNG、JPG 或 BMP 图片，不超过 32 MB、6400 万像素。</Item>
 	</Ditto_String_Table>
 	<Ditto_Options_Sheet>
 		<Item English_Text = "OK" ID = "1">确定</Item>

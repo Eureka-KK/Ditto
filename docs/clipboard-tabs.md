@@ -14,6 +14,12 @@
 - Right-click one clip > Edit note. Notes appear before the original preview and are included in searches. Notes are not pasted. Emptying a note removes it.
 - New controls have Simplified Chinese translations when that language pack is selected.
 
+## Wallpaper
+
+Options > General > Wallpaper and mask selects a local PNG/JPG/BMP image and enables or disables it. The black mask defaults to 85% and accepts 75-100%. The list centers and crops the image to cover its viewport. Unselected text and row numbers are white; search matches are pale yellow. Selected rows retain the opaque theme highlight. Wallpaper rows use plain-text previews so pasted rich-text colors cannot disappear into the picture; original clipboard payloads are unchanged. Tabs and search controls retain their theme backgrounds. Whole-window transparency is temporarily suppressed while a wallpaper is loaded, preserving text contrast; its saved preference remains available when wallpaper is disabled.
+
+Images must be readable, at most 32 MB and 64 megapixels. A missing or unreadable image falls back to the theme. The path and enable/mask preferences use Ditto's existing settings store. The original image is not copied into the clipboard database; keep it at the selected path. The decoded source is limited to 1024 pixels on its long edge and the composed viewport to 2048. No new service or timer is added, and both image caches are released when the popup hides. Actual working-set impact remains to be measured on a running build.
+
 ## Storage and resource usage
 
 The existing Main table gains two additive columns: clipNote (text, empty by default) and quickPasteTabOrder (integer, zero by default). The latter is used on group rows only. Upgrade checks column existence and can resume after a partial upgrade. A partial index contains pinned groups only. No existing payload or description is rewritten by the upgrade.
@@ -39,3 +45,4 @@ Native acceptance checks still required after a successful build:
 7. Test narrow windows, overflowing tab names, 100/150/200% DPI and the existing list/search/group controls.
 8. Compare private bytes and working set at idle and after cycling tabs with the same database. No native measurements have been recorded yet.
 9. Drag one/multiple clips from History and between custom tabs; confirm highlight, destination contents, notes, one payload per clip and Never Auto Delete. Cancel with Escape or release over History, +, a blank area or the current tab: contents stay unchanged. Groups alone cannot be dropped; mixed selections assign only clips. External drags onto tabs are rejected. Check overflowing tabs, DPI scaling and repeated open/close cycles, and confirm normal external drag paste still works and internal drops do not increment paste statistics.
+10. Select a bright, busy wallpaper; test masks 75/85/100%, selected/unselected rows, notes, search matches and rich-text/image clips. Resize, scroll by mouse/keyboard and switch tabs; wallpaper should remain fixed to the viewport. Test missing/corrupt images, disabling wallpaper, reopening, whole-window transparency and Cancel in both dialogs. Verify original pasted formats are unchanged and image caches are released on hide.

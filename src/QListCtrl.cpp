@@ -258,6 +258,7 @@ BEGIN_MESSAGE_MAP(CQListCtrl, CListCtrl)
 	//{{AFX_MSG_MAP(CQListCtrl)
 	ON_NOTIFY_REFLECT(LVN_KEYDOWN, OnKeydown)
 	ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomdrawList)
+	ON_NOTIFY_REFLECT(LVN_ENDSCROLL, OnWallpaperScrolled)
 	ON_WM_MOUSEMOVE()
 	ON_WM_SYSKEYDOWN()
 	ON_WM_ERASEBKGND()
@@ -508,7 +509,11 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 			}
 		}
 
-		pDC->FillSolidRect(rcItem, crBkgnd);
+		bool wallpaperRow = !(rItem.state & LVIS_SELECTED) && DrawWallpaper(pDC, rcItem);
+		if (wallpaperRow)
+			pDC->SetTextColor(RGB(255, 255, 255));
+		else
+			pDC->FillSolidRect(rcItem, crBkgnd);
 		nOldBKMode = pDC->SetBkMode(TRANSPARENT);
 
 		CRect rcText = rcItem;
@@ -588,9 +593,9 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 			}
 		}
 
-		if (DrawRtfText(nItem, rcText, pDC) == FALSE)
+		if (wallpaperRow || DrawRtfText(nItem, rcText, pDC) == FALSE)
 		{
-			auto highlightColor = CGetSetOptions::m_Theme.SearchTextHighlight();
+			auto highlightColor = wallpaperRow ? RGB(255, 230, 120) : CGetSetOptions::m_Theme.SearchTextHighlight();
 			//use unprintable characters so it doesn't find copied html to convert
 			if (m_searchText.GetLength() > 0 &&
 				FindNoCaseAndInsert(csText, m_searchText, StrF(_T("\x01\x04 color='#%02x%02x%02x'\x02"), GetRValue(highlightColor), GetGValue(highlightColor), GetBValue(highlightColor)), _T("\x01\x03\x04\x02"), m_linesPerRow) > 0)
@@ -631,9 +636,10 @@ void CQListCtrl::OnCustomdrawList(NMHDR* pNMHDR, LRESULT* pResult)
 			crHotKey.top += m_windowDpi->Scale(1 + extraFromClipWasPaste);
 
 			HFONT hOldFont = (HFONT)pDC->SelectObject(m_SmallFont);
-			COLORREF localOldTextColor = pDC->SetTextColor(CGetSetOptions::m_Theme.ListSmallQuickPasteIndexColor());
+			COLORREF indexColor = wallpaperRow ? RGB(255, 255, 255) : CGetSetOptions::m_Theme.ListSmallQuickPasteIndexColor();
+			COLORREF localOldTextColor = pDC->SetTextColor(indexColor);
 
-			CPen pen(PS_SOLID, 0, CGetSetOptions::m_Theme.ListSmallQuickPasteIndexColor());
+			CPen pen(PS_SOLID, 0, indexColor);
 			CPen* pOldPen = pDC->SelectObject(&pen);
 
 			pDC->DrawText(cs, crHotKey, DT_BOTTOM);
@@ -1211,8 +1217,100 @@ void CQListCtrl::OnSysKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	CListCtrl::OnSysKeyDown(nChar, nRepCnt, nFlags);
 }
 
+void CQListCtrl::UnloadWallpaper()
+{
+	m_wallpaperSurface.reset();
+	m_wallpaperImage.reset();
+	m_wallpaperViewport = CSize(0, 0);
+}
+
+void CQListCtrl::LoadWallpaper()
+{
+	UnloadWallpaper();
+	Invalidate(TRUE);
+	if (!CGetSetOptions::GetProfileLong(_T("ClipboardWallpaperEnabled"), FALSE))
+		return;
+	CString path = CGetSetOptions::GetProfileString(_T("ClipboardWallpaperPath"), _T(""));
+	CFileStatus status;
+	if (path.IsEmpty() || !CFile::GetStatus(path, status) || status.m_size > 32 * 1024 * 1024)
+		return;
+	std::unique_ptr<Gdiplus::Bitmap> image(Gdiplus::Bitmap::FromFile(CStringW(path)));
+	if (!image || image->GetLastStatus() != Gdiplus::Ok)
+		return;
+	UINT width = image->GetWidth(), height = image->GetHeight();
+	if (!width || !height || (ULONGLONG)width * height > 64000000)
+		return;
+	// Retain a small decoded image, not the original photo or an open file handle.
+	float scale = min(1.0f, 1024.0f / max(width, height));
+	m_wallpaperImage.reset(new Gdiplus::Bitmap(max(1, (int)(width * scale)), max(1, (int)(height * scale)), PixelFormat32bppPARGB));
+	if (m_wallpaperImage->GetLastStatus() != Gdiplus::Ok)
+	{
+		UnloadWallpaper();
+		return;
+	}
+	Gdiplus::Status rendered;
+	{
+		Gdiplus::Graphics graphics(m_wallpaperImage.get());
+		graphics.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBilinear);
+		rendered = graphics.DrawImage(image.get(), 0, 0, (int)m_wallpaperImage->GetWidth(), (int)m_wallpaperImage->GetHeight());
+	}
+	if (rendered != Gdiplus::Ok)
+	{
+		UnloadWallpaper();
+		return;
+	}
+	m_wallpaperMask = max(75, min(100, (int)CGetSetOptions::GetProfileLong(_T("ClipboardWallpaperMask"), 85)));
+	Invalidate(TRUE);
+}
+
+bool CQListCtrl::DrawWallpaper(CDC* dc, const CRect& clip)
+{
+	if (!m_wallpaperImage)
+		return false;
+	CRect client;
+	GetClientRect(client);
+	if (client.Width() <= 0 || client.Height() <= 0)
+		return false;
+	if (!m_wallpaperSurface || m_wallpaperViewport != client.Size())
+	{
+		m_wallpaperSurface.reset();
+		float scale = min(1.0f, 2048.0f / max(client.Width(), client.Height()));
+		int width = max(1, (int)(client.Width() * scale)), height = max(1, (int)(client.Height() * scale));
+		m_wallpaperSurface.reset(new Gdiplus::Bitmap(width, height, PixelFormat32bppPARGB));
+		if (m_wallpaperSurface->GetLastStatus() != Gdiplus::Ok)
+		{
+			UnloadWallpaper();
+			return false;
+		}
+		Gdiplus::Graphics graphics(m_wallpaperSurface.get());
+		graphics.Clear(Gdiplus::Color(255, 0, 0, 0));
+		graphics.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBilinear);
+		float cover = max((float)width / m_wallpaperImage->GetWidth(), (float)height / m_wallpaperImage->GetHeight());
+		float drawWidth = m_wallpaperImage->GetWidth() * cover, drawHeight = m_wallpaperImage->GetHeight() * cover;
+		Gdiplus::RectF destination((width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+		graphics.DrawImage(m_wallpaperImage.get(), destination);
+		Gdiplus::SolidBrush mask(Gdiplus::Color((BYTE)(m_wallpaperMask * 255 / 100), 0, 0, 0));
+		graphics.FillRectangle(&mask, 0, 0, width, height);
+		m_wallpaperViewport = client.Size();
+	}
+	Gdiplus::Graphics graphics(dc->GetSafeHdc());
+	graphics.SetClip(Gdiplus::Rect(clip.left, clip.top, clip.Width(), clip.Height()), Gdiplus::CombineModeIntersect);
+	return graphics.DrawImage(m_wallpaperSurface.get(), 0, 0, client.Width(), client.Height()) == Gdiplus::Ok;
+}
+
+void CQListCtrl::OnWallpaperScrolled(NMHDR*, LRESULT* result)
+{
+	if (m_wallpaperImage)
+		Invalidate(TRUE); // Native scroll moves pixels; repaint to keep wallpaper fixed to the viewport.
+	*result = 0;
+}
+
 BOOL CQListCtrl::OnEraseBkgnd(CDC* pDC)
 {
+	CRect wallpaperRect;
+	GetClientRect(wallpaperRect);
+	if (DrawWallpaper(pDC, wallpaperRect))
+		return TRUE;
 
 	CRect rect;
 	GetClientRect(&rect);
